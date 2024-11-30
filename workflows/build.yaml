@@ -16,7 +16,7 @@ jobs:
     #change ubuntu-latest to runner if using the included gitea configs
     runs-on: ubuntu-latest 
     env:
-      IMAGE_NAME: bootc-example
+      IMAGE_NAME: fedora
       REGISTRY: ghcr.io/[USERNAME]
    
     steps:
