@@ -1,23 +1,25 @@
-#inspired from https://github.com/nzwulfin/cicd-bootc/blob/main/.github/workflows/build_fedora_bootc.yml
+# inspired from https://github.com/nzwulfin/cicd-bootc/blob/main/.github/workflows/build_fedora_bootc.yml
 name: Build bootc image with GHA
+
 on:
   schedule:
-#weekly updates - change as needed
+    # Weekly updates on Friday
     - cron: "0 0 * * 5"
   workflow_dispatch:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**/README.md'
 
 jobs:
   build:
     name: Build bootc image
-
-    #change ubuntu-latest to runner if using the included gitea configs
     runs-on: ubuntu-latest 
+    
     env:
-      IMAGE_NAME: fedora
-      REGISTRY: ghcr.io/[USERNAME]
+      IMAGE_NAME: ${{ github.event.repository.name }}
+      REGISTRY: ghcr.io/${{ github.repository_owner }}
    
     steps:
       - name: Clone the repository
@@ -32,13 +34,13 @@ jobs:
           containerfiles: |
             ./Containerfile
 
-      # workaround for https://github.com/redhat-actions/podman-login/issues/42 since the docker config from the host doesn't come up to the container
+      # workaround for https://github.com/redhat-actions/podman-login/issues/42
       - name: Workaround open podman-login action issue
         env:
-          auth: "{ \"auths\": {} }"
+          auth: '{ "auths": {} }'
         run: |
           mkdir -p $HOME/.docker
-          echo $auth > $HOME/.docker/config.json
+          echo "$auth" > $HOME/.docker/config.json
 
       - name: Log in to the GitHub Container registry
         uses: redhat-actions/podman-login@v1
