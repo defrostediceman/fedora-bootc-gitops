@@ -1,0 +1,56 @@
+#inspired from https://github.com/nzwulfin/cicd-bootc/blob/main/.github/workflows/build_fedora_bootc.yml
+name: Build bootc image with GHA
+on:
+  schedule:
+#weekly updates - change as needed
+    - cron: "0 0 * * 5"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build bootc image
+
+    #change ubuntu-latest to runner if using the included gitea configs
+    runs-on: ubuntu-latest 
+    env:
+      IMAGE_NAME: fedora
+      REGISTRY: ghcr.io/[USERNAME]
+   
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Use buildah bud to create the image
+        id: build-image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          tags: latest ${{ github.sha }}
+          containerfiles: |
+            ./Containerfile
+
+      # workaround for https://github.com/redhat-actions/podman-login/issues/42 since the docker config from the host doesn't come up to the container
+      - name: Workaround open podman-login action issue
+        env:
+          auth: "{ \"auths\": {} }"
+        run: |
+          mkdir -p $HOME/.docker
+          echo $auth > $HOME/.docker/config.json
+
+      - name: Log in to the GitHub Container registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to GitHub Container Repository
+        id: push-to-ghcr
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build-image.outputs.image }}
+          tags: ${{ steps.build-image.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
